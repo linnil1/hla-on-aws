@@ -1,0 +1,254 @@
+{
+  "Comment": "Run HLA pipeline",
+  "StartAt": "Init data",
+  "States": {
+    "Init data": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "arn:aws:lambda:us-east-2:493445452763:function:hla_init:$LATEST",
+        "Payload.$": "$"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 6,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Parallel",
+      "OutputPath": "$.Payload"
+    },
+    "Parallel": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Set hisat2 running status",
+          "States": {
+            "Set hisat2 running status": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "arn:aws:lambda:us-east-2:493445452763:function:hla_set_method_status:$LATEST",
+                "Payload": {
+                  "name.$": "$.name",
+                  "method": "hisat2",
+                  "status": "Running"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException"
+                  ],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 6,
+                  "BackoffRate": 2
+                }
+              ],
+              "Next": "Submit hisat2",
+              "ResultPath": null
+            },
+            "Submit hisat2": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::batch:submitJob.sync",
+              "Parameters": {
+                "JobName": "step_submit_hisat2",
+                "JobDefinition": "arn:aws:batch:us-east-2:493445452763:job-definition/hla_hisat2:4",
+                "JobQueue": "arn:aws:batch:us-east-2:493445452763:job-queue/hla_queue",
+                "Parameters": {
+                  "read1.$": "$.read1",
+                  "read2.$": "$.read2",
+                  "hisat_index": "/mnt/index/hisat2_index",
+                  "output_folder.$": "States.Format('{}/hisat2/', $.base)"
+                }
+              },
+              "Next": "Parsing hisat2 Result",
+              "ResultPath": null,
+              "Catch": [
+                {
+                  "ErrorEquals": [
+                    "States.ALL"
+                  ],
+                  "Next": "Set hisat2 Fail status",
+                  "ResultPath": "$.error"
+                }
+              ]
+            },
+            "Set hisat2 Fail status": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "arn:aws:lambda:us-east-2:493445452763:function:hla_set_method_status:$LATEST",
+                "Payload": {
+                  "name.$": "$.name",
+                  "method": "hisat2",
+                  "status": "Fail"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException"
+                  ],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 6,
+                  "BackoffRate": 2
+                }
+              ],
+              "ResultPath": null,
+              "End": true
+            },
+            "Parsing hisat2 Result": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "Payload.$": "$",
+                "FunctionName": "arn:aws:lambda:us-east-2:493445452763:function:hla_hisat2_result:$LATEST"
+              },
+              "ResultPath": "$.result",
+              "ResultSelector": {
+                "hisat2.$": "$.Payload"
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Set bwakit running status",
+          "States": {
+            "Set bwakit running status": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "arn:aws:lambda:us-east-2:493445452763:function:hla_set_method_status:$LATEST",
+                "Payload": {
+                  "name.$": "$.name",
+                  "method": "bwakit",
+                  "status": "Running"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException"
+                  ],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 6,
+                  "BackoffRate": 2
+                }
+              ],
+              "Next": "Submit bwakit",
+              "ResultPath": null
+            },
+            "Submit bwakit": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::batch:submitJob.sync",
+              "Parameters": {
+                "JobName": "step_submit_bwakit",
+                "JobDefinition": "arn:aws:batch:us-east-2:493445452763:job-definition/hla_bwakit:1",
+                "JobQueue": "arn:aws:batch:us-east-2:493445452763:job-queue/hla_queue",
+                "Parameters": {
+                  "read1.$": "$.read1",
+                  "read2.$": "$.read2",
+                  "hg38": "/mnt/index/bwakit_index/hs38DH.fa",
+                  "outputname.$": "States.Format('{}/bwakit/{}', $.base, $.name)"
+                }
+              },
+              "ResultPath": null,
+              "Next": "Parsing bwakit Result",
+              "Catch": [
+                {
+                  "ErrorEquals": [
+                    "States.ALL"
+                  ],
+                  "Next": "Set bwakit Fail status",
+                  "ResultPath": "$.error"
+                }
+              ]
+            },
+            "Set bwakit Fail status": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "arn:aws:lambda:us-east-2:493445452763:function:hla_set_method_status:$LATEST",
+                "Payload": {
+                  "name.$": "$.name",
+                  "method": "bwakit",
+                  "status": "Fail"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException"
+                  ],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 6,
+                  "BackoffRate": 2
+                }
+              ],
+              "ResultPath": null,
+              "End": true
+            },
+            "Parsing bwakit Result": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "Payload.$": "$",
+                "FunctionName": "arn:aws:lambda:us-east-2:493445452763:function:hla_bwakit_result:$LATEST"
+              },
+              "ResultPath": "$.result",
+              "End": true,
+              "ResultSelector": {
+                "bwakit.$": "$.Payload"
+              }
+            }
+          }
+        }
+      ],
+      "Next": "Set finished"
+    },
+    "Set finished": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "arn:aws:lambda:us-east-2:493445452763:function:hla_final:$LATEST",
+        "Payload": {
+          "name.$": "$[0].name",
+          "status": "Done"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 6,
+          "BackoffRate": 2
+        }
+      ],
+      "ResultPath": null,
+      "Next": "Success"
+    },
+    "Success": {
+      "Type": "Succeed"
+    }
+  }
+}

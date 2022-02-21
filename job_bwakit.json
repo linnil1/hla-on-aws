@@ -1,0 +1,70 @@
+{
+    "jobDefinitionName": "hla_bwakit",
+    "type": "container",
+    "parameters": {
+        "outputname": "/mnt/data/test1/bwakit/test1",
+        "hg38": "/mnt/index/bwakit_index/hs38DH.fa",
+        "read2": "/mnt/data/test1/test1.R2.fq.gz",
+        "read1": "/mnt/data/test1/test1.R1.fq.gz"
+    },
+    "timeout": {
+        "attemptDurationSeconds": 3600
+    },
+    "platformCapabilities": [
+        "FARGATE"
+    ],
+    "containerProperties": {
+        "image": "quay.io/biocontainers/bwakit:0.7.17.dev1--0",
+        "networkConfiguration": {
+            "assignPublicIp": "ENABLED"
+        },
+        "resourceRequirements": [
+            {
+                "value": "4",
+                "type": "VCPU"
+            },
+            {
+                "value": "12288",
+                "type": "MEMORY"
+            }
+        ],
+        "command": [
+            "/mnt/index/run_bwakit.sh",
+            "Ref::hg38",
+            "Ref::read1",
+            "Ref::read2",
+            "Ref::outputname"
+        ],
+        "volumes": [
+            {
+                "name": "index",
+                "efsVolumeConfiguration": {
+                    "fileSystemId": "fs-02b3281e00a6df32a",
+                    "rootDirectory": "/"
+                }
+            },
+            {
+                "name": "data",
+                "efsVolumeConfiguration": {
+                    "fileSystemId": "fs-0b6fcc539fde3326d",
+                    "rootDirectory": "/"
+                }
+            }
+        ],
+        "mountPoints": [
+            {
+                "containerPath": "/mnt/index",
+                "readOnly": true,
+                "sourceVolume": "index"
+            },
+            {
+                "containerPath": "/mnt/data",
+                "sourceVolume": "data"
+            }
+        ],
+        "fargatePlatformConfiguration": {
+            "platformVersion": "1.4.0"
+        },
+        "executionRoleArn": "arn:aws:iam::493445452763:role/hla"
+    }
+}
