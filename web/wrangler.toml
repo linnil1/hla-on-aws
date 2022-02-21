@@ -1,0 +1,15 @@
+name = "hla"
+type = "javascript"
+account_id = '84360be8d748ddadfd6897136883929a'
+zone_id = '81f4ea11d5b83ab03a5b2c7cb73678eb'
+workers_dev = false
+route = "hla.linnil1.me/*"
+compatibility_date = "2022-02-09"
+
+[site]
+bucket = ".output/public"
+entry-point = ".output"
+
+[build]
+command = "NITRO_PRESET=cloudflare yarn nuxt build"
+upload.format = "service-worker"
