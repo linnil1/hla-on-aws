@@ -1,0 +1,69 @@
+{
+    "jobDefinitionName": "hla_kourami",
+    "type": "container",
+    "parameters": {
+        "korami_db": "/mnt/index/kourami_index",
+        "korami_jar": "/mnt/index/kourami_index/Kourami.jar",
+        "bam": "/mnt/data/test1/kourami/test1.aln.panel.bam",
+        "outputname": "/mnt/data/test1/kourami/test1.aln.panel.kourami"
+    },
+    "timeout": {
+        "attemptDurationSeconds": 3600
+    },
+    "platformCapabilities": [
+        "FARGATE"
+    ],
+    "containerProperties": {
+        "image": "docker.io/library/openjdk:8-slim",
+        "networkConfiguration": {
+            "assignPublicIp": "ENABLED"
+        },
+        "resourceRequirements": [
+            {
+                "value": "4",
+                "type": "VCPU"
+            },
+            {
+                "value": "12288",
+                "type": "MEMORY"
+            }
+        ],
+        "command": [
+            "java", "-jar", "Ref::kourami_jar",
+            "-d", "Ref::kourami_db",
+            "-o", "Ref::outputname",
+            "Ref::bam"
+        ],
+        "volumes": [
+            {
+                "name": "index",
+                "efsVolumeConfiguration": {
+                    "fileSystemId": "fs-02b3281e00a6df32a",
+                    "rootDirectory": "/"
+                }
+            },
+            {
+                "name": "data",
+                "efsVolumeConfiguration": {
+                    "fileSystemId": "fs-0b6fcc539fde3326d",
+                    "rootDirectory": "/"
+                }
+            }
+        ],
+        "mountPoints": [
+            {
+                "containerPath": "/mnt/index",
+                "readOnly": true,
+                "sourceVolume": "index"
+            },
+            {
+                "containerPath": "/mnt/data",
+                "sourceVolume": "data"
+            }
+        ],
+        "fargatePlatformConfiguration": {
+            "platformVersion": "1.4.0"
+        },
+        "executionRoleArn": "arn:aws:iam::493445452763:role/hla"
+    }
+}

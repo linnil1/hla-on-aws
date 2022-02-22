@@ -212,10 +212,158 @@
                 "FunctionName": "arn:aws:lambda:us-east-2:493445452763:function:hla_bwakit_result:$LATEST"
               },
               "ResultPath": "$.result",
-              "End": true,
               "ResultSelector": {
                 "bwakit.$": "$.Payload"
-              }
+              },
+              "Next": "Set kourami status"
+            },
+            "Set kourami status": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "arn:aws:lambda:us-east-2:493445452763:function:hla_set_method_status:$LATEST",
+                "Payload": {
+                  "name.$": "$.name",
+                  "method": "kourami",
+                  "status": "Running"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException"
+                  ],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 6,
+                  "BackoffRate": 2
+                }
+              ],
+              "ResultPath": null,
+              "Next": "Submit Kourami Preprocess"
+            },
+            "Submit Kourami Preprocess": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::batch:submitJob.sync",
+              "Parameters": {
+                "JobName": "step_submit_krouami_preprocess",
+                "JobDefinition": "arn:aws:batch:us-east-2:493445452763:job-definition/hla_kourami_preprocess:1",
+                "JobQueue": "arn:aws:batch:us-east-2:493445452763:job-queue/hla_queue",
+                "Parameters": {
+                  "kourami_panel": "/mnt/index/kourami_index/All_FINAL_with_Decoy.fa.gz",
+                  "kourami_hs38": "/mnt/index/kourami_index/hs38NoAltDH.fa",
+                  "bam.$": "States.Format('{}/bwakit/{}.aln.bam', $.base, $.name)",
+                  "output_folder.$": "States.Format('{}/kourami', $.base)"
+                }
+              },
+              "ResultPath": null,
+              "Next": "Submit Kourami",
+              "Catch": [
+                {
+                  "ErrorEquals": [
+                    "States.ALL"
+                  ],
+                  "Next": "Set Kourami Fail status",
+                  "ResultPath": "$.error"
+                }
+              ]
+            },
+            "Submit Kourami": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::batch:submitJob.sync",
+              "Parameters": {
+                "JobName": "step_submit_krouami",
+                "JobDefinition": "arn:aws:batch:us-east-2:493445452763:job-definition/hla_kourami:1",
+                "JobQueue": "arn:aws:batch:us-east-2:493445452763:job-queue/hla_queue",
+                "Parameters": {
+                  "kourami_db": "/mnt/index/kourami_index",
+                  "kourami_jar": "/mnt/index/kourami_index/Kourami.jar",
+                  "bam.$": "States.Format('{}/kourami/{}.aln.panel.bam', $.base, $.name)",
+                  "outputname.$": "States.Format('{}/kourami/{}.aln.panel.kourami', $.base, $.name)"
+                }
+              },
+              "ResultPath": null,
+              "Next": "Parsing kourami Result",
+              "Catch": [
+                {
+                  "ErrorEquals": [
+                    "States.ALL"
+                  ],
+                  "Next": "Set Kourami Fail status",
+                  "ResultPath": "$.error"
+                }
+              ]
+            },
+            "Set Kourami Fail status": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "arn:aws:lambda:us-east-2:493445452763:function:hla_set_method_status:$LATEST",
+                "Payload": {
+                  "name.$": "$.name",
+                  "method": "kourami",
+                  "status": "Fail"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException"
+                  ],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 6,
+                  "BackoffRate": 2
+                }
+              ],
+              "ResultPath": null,
+              "End": true
+            },
+            "Parsing kourami Result": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "Payload.$": "$",
+                "FunctionName": "arn:aws:lambda:us-east-2:493445452763:function:hla_kourami_result:$LATEST"
+              },
+              "ResultPath": "$.result",
+              "ResultSelector": {
+                "bwakit.$": "$.Payload"
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Set Kourami pending status",
+          "States": {
+            "Set Kourami pending status": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "arn:aws:lambda:us-east-2:493445452763:function:hla_set_method_status:$LATEST",
+                "Payload": {
+                  "name.$": "$.name",
+                  "method": "kourami",
+                  "status": "Pending"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException"
+                  ],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 6,
+                  "BackoffRate": 2
+                }
+              ],
+              "ResultPath": null,
+              "End": true
             }
           }
         }
