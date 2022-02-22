@@ -32,7 +32,8 @@ export default {
       // data: { status: "Unknown" }
       data: {
         status: "Unknown",
-        result: {
+        // change to result_test to result for debugging
+        result_test: {
           'hisat': {
             result_file: "test3.hisat.hisat_v3460.txt",
             result: {

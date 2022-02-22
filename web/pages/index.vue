@@ -1,16 +1,34 @@
 <template lang="pug">
 div
-  .h1 HLA gallery runner
+  h1 HLA gallery runner
+  p This web wil run HLA typing tools: e.g. hisat2,Kourami,bwa-kit
+  p
+    | The fastq should smaller than 1G, otherwise it'll timeout and fail,
+    | you may need to run some preprocessing to extract the HLA-related reads.
+
   label Read1(xx.fq.gz)
   input.form-control-file(type="file" v-on:change="readFastq($event, 'read1')")
-  span {{ status1 }}
+  span {{ status1 ? "Uploaded" : "Wait for upload" }}
   br
   label Read2(xx.fq.gz)
   input.form-control-file(type="file" v-on:change="readFastq($event, 'read2')")
-  span {{ status2 }}
+  span {{ status2 ? "Uploaded" : "Wait for upload" }}
   br
   button.btn.btn-primary(type='button' @click="getName") Create Task   
   p {{ ready }}
+
+  h2 Citation
+  h3 Kourami
+  p Lee, H., & Kingsford, C. Kourami: graph-guided assembly for novel human leukocyte antigen allele discovery. Genome Biology 19(16), 2018
+  h3 hisat2
+  p Kim, D., Paggi, J.M., Park, C. et al. Graph-based genome alignment and genotyping with HISAT2 and HISAT-genotype. Nat Biotechnol 37, 907–915 (2019).
+  h3 bwakit
+  p Li H. (2013) Aligning sequence reads, clone sequences and assembly contigs with BWA-MEM. arXiv:1303.3997v2 [q-bio.GN]. (if you use the BWA-MEM algorithm or the fastmap command, or want to cite the whole BWA package)
+
+  h2 This website
+  p Author: linnil1
+  p Github: <a href="https://github.com/linnil1/hla-on-aws/">https://github.com/linnil1/hla-on-aws</a>
+
 </template>
 
 <script>
