@@ -1,0 +1,2 @@
+FROM continuumio/miniconda3
+RUN conda install -c bioconda hisat2=2.2.1 samtools=1.13
