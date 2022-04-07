@@ -1,2 +1,6 @@
 FROM continuumio/miniconda3
-RUN conda install -c bioconda hisat2=2.2.1 samtools=1.13
+RUN conda install -c bioconda hisat2=2.2.1 samtools=1.13 git
+RUN git clone https://github.com/DaehwanKimLab/hisat-genotype.git /opt/hisat-genotype && \
+    echo "2.2.1" >> /opt/hisat-genotype/hisat2/VERSION && \
+    ln -s /opt/hisat-genotype/hisatgenotype /usr/local/bin/
+ENV PYTHONPATH=/opt/hisat-genotype/hisatgenotype_modules
